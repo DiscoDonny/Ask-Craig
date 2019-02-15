@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Ask Craig</title>
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css">
+
+<script src='https://unpkg.com/bsv'></script>
+<script src="https://www.moneybutton.com/moneybutton.js"></script>
+
+
+<script type="text/javascript">
+//Logic
+if(!bsv)console.log("MUST load BSV first")
+Uint8Array.prototype.toText=function (){
+  var dataString = "";
+  for (var i = 0; i < this.length; i++) {
+    dataString += String.fromCharCode(this[i]);
+  }
+  return dataString
+}
+
+// MBOutputs = outputs.map(toMBOut)
+var toMBOut = function (output) {
+  return {
+    amount: output.satoshis/100000000,
+    script: output.script.toASM(),
+    currency: 'BSV'
+  }
+}
+var buildDataOutput = function (namebuf,questionbuf,answerbuf) {
+  var script = new bsv.Script.buildDataOut("ASKCRAIG")
+  script.add(namebuf)
+  script.add(questionbuf)+(answerbuf)
+  return new bsv.Transaction.Output({
+    satoshis:0,
+    script:script
+  })
+}
+var buildPayOutput = function (address, amount) {
+  return new bsv.Transaction.Output({
+    satoshis:amount,
+    script:new bsv.Script.buildPublicKeyHashOut(address)
+  })
+}
+</script>
+
+
+<script type="text/javascript">
+//P2P
+async function getAddr(addr){
+    var url=endpoint+'/addr/'+addr;
+    return fetch(url).then(function(r){
+        return r.json();
+    });
+}
+
+var getTX=async function(addrinfo){
+    var txs=[];
+    for(var i=0;i<addrinfo.transactions.length;i++){
+        var url=endpoint+'/tx/'+addrinfo.transactions[i];
+        var tx=await fetch(url).then(function(r){
+            return r.json();
+        });
+        tx.utxos=getUTXO(tx,addrinfo.addrStr);
+        txs[i]=tx;
+    }
+    return txs;
+}
+
+var getUTXO=function(tx,addr){
+    var utxos=[];
+    for(var i=0;i<tx.vout.length;i++){
+        if(tx.vout[i].scriptPubKey.type=='pubkeyhash'&&tx.vout[i].scriptPubKey.addresses[0]==addr&&tx.vout[i].spentTxId==null){
+            var utxo={
+                "txId":tx.txid,
+                "outputIndex":i,
+                "address":addr,
+                "script":tx.vout[i].scriptPubKey.hex,
+                "satoshis":tx.vout[i].valueSat,
+                "rawtx":tx.rawtx
+            }
+            utxos.push(utxo);
+        }
+    }
+    return utxos;
+}
+var broadcastTX=function(rawtx){
+    var url=endpoint+"/tx/send"
+    return fetch(url,{
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({"rawtx":rawtx})
+    }).then(function(r){
+        if(r.ok)return r.text();
+        else throw r.text();
+    }).catch(async function(err){
+        var result=await err;
+        alert(result);
+    });
+}
+</script>
+
+
+<script type = "text/javascript">
+  function RandomInt(low, high)
+  // Given : low <= high
+  // Returns : a random integer in the range [low, high]
+  {
+    return Math.floor(Math.random()*(high-low+1)) + low;
+  }
+  function RandomOneOf(list)
+  // Given : list is a nonempty list (array)
+  // Returns: a random item from the list
+  {
+    return list[RandomInt(0, list.length-1)];
+  }
+    function Answer()
+    { var ans, fullAns;
+      ans = RandomOneOf(["If you don’t believe me or don’t understand it, I don’t have time to explain it to you.",
+      "I’m sure that there will either be very large transaction volume or no volume.",
+      "Did you even read the whitepaper?",
+      "I really do not care if you want to not accept reality.",
+      "Read my blog.",
+      "See, the issue is... you are an idiot.",
+      "Bitcoin addresses are designed to have one use and then you send the change to a NEW address and do not use the other again.",
+      "You split, we bankrupt you",
+      "Get a real job",
+      "You don't like it ...stiff!",
+      "I’m not going to say yea or nay. Or do anything else. I’m not retracting anything, because I don’t think it should matter.",
+      "Proof of work",
+      "I love competition.","I don’t really care. These people hate me no matter what.",
+      "Who am I competing with?",
+      "It’s exactly everything that’s wrong with society in many ways. It is socialist.",
+      "They have an ideal of what they want in bitcoin that is not bitcoin.",
+      "Once version 0.1 was released the core design was set in stone for the rest of its lifetime." ,
+      "What, we’re all gonna grab each other, hug, and sing 'Kumbaya'?",
+      "No, sorry. I have no interest in wasting time on fools.",
+      "Well, my patents cover this.",
+      "I probably have a masters or doctorate in this field, I have so many I forgot.",
+      "It's in the bloody whitepaper, read it!",
+      "Honestly, I have said the same thing for a decade now.",
+      "I will not be a leader for a bunch of lazy assholes who think you HODL and become rich. Without effort",
+      "They are promoting a sham, a ponzi, a fraud. it is not bitcoin.",
+      "Bitcoin is NOT digital gold.",
+      "Dignity comes from what you do, not what you earn.",
+      "The craziest thing is that people think they can judge me on their standards or as if I am seeking to raise capital. Think again.",
+      "You cannot have freedom and equality. Freedom leads to inequality. Equality stifles freedom. Choose freedom",
+      "I am Satoshi"]);
+      fullAns = "Craig says: <br> <i>" + ans +"</i>";
+      document.getElementById('answer').innerHTML = fullAns;}
+  </script>
+
+  <style>
+  .container {position: relative; width: 50%; }
+  .image {opacity: 0.2; display: block; width: 50%; height: auto; transition: 5s ease; backface-visibility: hidden;}
+  .middle {transition: .5s ease;opacity: 0;text-align: center;}
+  .container:hover .image {opacity: 1;}
+  .container:hover .middle { opacity: 1;}
+  .text {background-color: white;color: black;font-size: 12px;   }
+  </style>
+
+</head>
+
+<body style="background: radial-gradient(#fdfefe ,#fdfefe, #fbfcfc, #3498db);">
+  <br>
+  <div class="container">
+  <span id="info" class="glyphicon glyphicon-info-sign" aria-hidden="true" style="font-size:25pt;vertical-align:top" title="Just click the button, don't be lazy!"></span></h1>
+    <center><b><h1 style="color:Tomato;"> Ask Craig<a href="https://www.pagereturn.com/768792e4b43ca09578ed26b5befce7828a924db18a73fc433f64a46ef5e9239d">*</a> anything about Bitcoin </h1><b></center>
+      <center><i><a href="https://www.bitcoinfiles.org/df356acebad6642bf7859d2de48eb3d6e3917d9cd360dcb8eea02ca7d7602206">Bitcoin SV</a> </i></center>
+    <br>
+    <br>
+    <i><span class="input-group">What is your name?</span></i>
+    <input class="form-control" id='name' onChange="preparequestion()" onKeyUp="preparequestion()" style="min-width: 60%" placeholder="Someone">
+    <br>
+    <i>What is your question?</i>
+    <center>
+    <textarea class="form-control" id='question' rows="3" onChange="preparequestion()" onKeyUp="preparequestion()" style="min-width: 80%"></textarea>
+    <div class="input-group">
+    </center>
+    <br>
+    <br>
+    <center>
+    <p><i>click the dragon</i></p>
+    <div class="container">
+      <img src="https://bico.media/a3907e5b910f798c8d0fb450d483a0aefa5ce40ac74064b377603e5ea51deccb" width="150" height="150" onclick="Answer();">
+      <div class="middle">
+          <i><div class="text">Did you fill in your name and question already? <br> Yes? Then click it!</div></i>
+        </div>
+      </div>
+    <h3 style="color:Tomato;"><div id="answer" onChange="prepareanswer()" onKeyUp="prepareanswer()"></div></h3> </Center>
+    </div>
+    <br>
+  <hr style="color:Tomato;">
+    <center><div id="MB"></div></center>
+    <div id="questions" class="container">
+      <hr>
+      <br>
+      <div>Previous questions:</div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+  //UI
+  var myname = localStorage.getItem("myname")
+  document.getElementById('name').value = myname
+  preparequestion = function () {
+    var name = bsv.deps.Buffer.from(document.getElementById('name').value)
+    if(name=="")name = "Someone"
+    var question = bsv.deps.Buffer.from(document.getElementById('question').value)
+    var outs = [buildDataOutput(name,question,answer),buildPayOutput('17JVSJvdqyC32vd4mmi2Y7UhTyoNBmNiF9',10000)]
+    var MBouts = outs.map(toMBOut)
+    var MBDiv = document.getElementById('MB')
+    MBDiv.innerHTML = ""
+    var questionDiv = document.createElement("div")
+    MBDiv.appendChild(questionDiv)
+    myname = name
+    moneyButton.render(questionDiv, {
+  //    amount: "1",
+  //    to: "12cRRk9wn2LofWKE2wwxb7mw5qNeMaW7zH",
+  //    currency: "USD",
+      label: "Ask Craig",
+      clientIdentifier: "1951a1d7afa58e048d4a9b750ddde405",
+      type: "tip",
+      outputs: MBouts,
+      onPayment: function (arg) { afterquestion() },
+      onError: function (arg) { alert("Oops, Something wrong.") }
+    })
+  }
+
+  var query = {
+    "v": 3,
+    "q": {
+      "find": { "out.s1": "ASKCRAIG"},
+    },
+    "r": {
+      "f": "[ .[] | {name: .out[0].s2, question: .out[0].s3, answer: .out[0].s4} ]"
+    }
+  }
+  var b64 = btoa(JSON.stringify(query));
+  var url = "https://genesis.bitdb.network/q/1FnauZ9aUH2Bex6JzdcV4eNX7oLSSEbxtN/" + b64;
+  var header = {
+    headers: { key: ['159bcdKY4spcahzfTZhBbFBXrTWpoh4rd3'] }
+  };
+  displayQuestions = function (){
+    var questions = document.getElementById('questions')
+    fetch(url, header).then(function(r) {
+      return r.json()
+    }).then(function(r) {
+      questions.innerHTML= "";
+      return r
+    }).then(function(r) {
+      // "r.c" stands for confirmed transactions response array
+      // Parse the response and render the results on the screen
+      r.u.forEach(function(output) {
+        var div = document.createElement("div");
+        var name = document.createElement("b");
+        name.innerHTML = output.name + "question";
+        var question = document.createElement("p");
+        question.innerHTML = output.question ;
+        div.appendChild(name)
+        div.appendChild(question)
+        if(myname!=="Someone" && output.name==myname)div.style="color: blue"
+        prependChild(questions,div)
+      })
+      r.c.forEach(function(output) {
+        var div = document.createElement("div");
+        var name = document.createElement("b");
+        name.innerHTML = output.name + " asked:";
+        var question = document.createElement("p");
+        question.innerHTML = output.question;
+        div.appendChild(name)
+        div.appendChild(question)
+        if(myname!=="Someone" && output.name==myname)div.style="color: black"
+        questions.appendChild(div)
+      })
+
+      prependChild(questions, document.createElement("br"))
+    })
+  }
+  function prependChild(parent,newChild){
+    if(parent.firstChild){
+      parent.insertBefore(newChild,parent.firstChild);
+    } else {
+      parent.appendChild(newChild);
+    }
+    return parent;
+  }
+  afterquestion = function () {
+    var MBDiv = document.getElementById('MB')
+    MBDiv.innerHTML = "Want to ask another question?"
+    if(myname!=="Someone")localStorage.setItem("myname",myname)
+    setTimeout(displayQuestions,2000)
+  }
+  var statement="This Metanet app is fully hosted on Bitcoin SV put on the blockchain in 2019. You'll need a Moneybutton to use this app. Don't yet have Moneybutton, get one at www.Moneybutton.com. This app is just for fun. Craig isn't really replying to your question, he has better things to do than to respond to your dumb ass questions. Reminder: Don't put illegal content on the Blockchain. Just don't! A bitcoin transaction counts as a digital signature and can be used against you as evidence. It is basically a confession of any wrongdoing. We can not remove content for you."
+  document.getElementById('info').onclick=function(){
+    alert(statement)
+  }
+  setTimeout(displayQuestions,1000)
+  </script>
+
+  <hr color=”Tomato”>
+<br>
+  <center>Made by Donald, 2019 <a href="http://handcash.to/$DONALD">&nbsp;&nbsp;Ping me a Penny:)</a></center>
+  <center>Powered by <a href="https://www.moneybutton.com/">Moneybutton,</a> <a href="https://BitDB.network">BtiDB,</a> <a href="https://www.pagereturn.com/">Pagereturn,</a> <a href="https://bitcoinfiles.com/">Bitcoinfiles,</a> <a href="https://Bico.media">& Bico.media</a>
+  <hr>
+  <br>
+</body>
+</html>
